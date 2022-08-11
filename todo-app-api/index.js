@@ -1,36 +1,78 @@
-const express = require('express')
-const app = express()
-const PORT = 5050
+require('dotenv').config();
+const express = require('express');
+const bodyParser = require('body-parser');
+const app = express();
+const PORT = 8000;
+
+app.use(bodyParser.json());
+
+const { Pool, Client } = require('pg');
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+    throw new Error('missing DATABASE_URL in process.env');
+}
+const pool = new Pool({
+    connectionString,
+})
+const client = new Client({ connectionString });
+client.connect()
+    .then(async () => {
+        const res = await client.query('SELECT $1::text as message', ['La base de datos se conectó exitosamente'])
+        console.log(res.rows[0].message)
+        await client.end()
+    })
+    .catch((err) => console.error(err))
 
 app.get('/', (req, res) => {
-    console.log('Se ejecutara la ruta base');
+    console.log('Se ejecutó la ruta base');
     res.send('El servidor esta corriendo 🚀');
+});
+
+// C - Create Todos
+app.post('/todos', async (req, res) => {
+    console.log('Crear tarea ✅');
+    const { todo } = req.body;
+
+    const _res = await pool.query(`INSERT INTO todos (todo) VALUES ($1) RETURNING *;`, [todo]);
+    res.status(200).json(_res.rows[0]);
 })
 
-app.post('/todos', (req, res) => {
-    console.log('Crear la tarea');
-    res.send('Se creo la tarea con exito 🟢')
-})
-
+// R - Read Todos
 app.get('/todos/:id', (req, res) => {
-    console.log('leer una tarea');
-    res.send('Una sola tarea mostrada 1️⃣ 📖')
-})
+    const { id } = req.params;
+
+    console.log('Leer la tarea tarea ' + id);
+
+    // Proceso de obtener una sola tarea
+
+    res.send(`Info de la tarea ${id}!`);
+});
+
 app.get('/todos', (req, res) => {
-    console.log();
-    res.send('Todas las tareas mostradas 📖')
-})
+    console.log('Leer lista de tareas');
+    res.send('Lista de tareas!');
+});
+
+
 app.patch('/todos/:id', (req, res) => {
-    const { id: todoId } = req.params
-    console.log('Actualizar una tarea');
-    res.send(`Se actualizo la tarea  ${todoId}  con exito 🟣`)
-})
+    const { id: todoId } = req.params;
+    console.log(`Actualizar la tarea ${todoId}`);
+
+
+
+    res.send(`Se actualizó la tarea ${todoId} con éxito!`);
+});
+
+
 app.delete('/todos/:id', (req, res) => {
-    const { id: todoId } = req.params
-    console.log('Eliminar una tarea');
-    res.send(`Se elimino la tarea ${todoId} con exito 🛑`)
-})
+    const { id: todoId } = req.params;
+    console.log(`Eliminar una tarea ${todoId}`);
+
+
+
+    res.send(`Se eliminó la tarea ${todoId} con éxito!`);
+});
 
 app.listen(PORT, () => {
-    console.log(`API funcionando en el puerto ${PORT} ✅`);
-})
+    console.log(`El servidor esta corriendo en http://localhost:${PORT}`);
+});
