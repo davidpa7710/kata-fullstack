@@ -1,9 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const app = express();
-const PORT = 8000;
+const PORT = 5050;
 
+app.use(cors());
 app.use(bodyParser.json());
 
 const { Pool, Client } = require('pg');
@@ -37,40 +39,36 @@ app.post('/todos', async (req, res) => {
     res.status(200).json(_res.rows[0]);
 })
 
-// R - Read Todos
-app.get('/todos/:id', (req, res) => {
-    const { id } = req.params;
 
-    console.log('Leer la tarea tarea ' + id);
-
-    // Proceso de obtener una sola tarea
-
-    res.send(`Info de la tarea ${id}!`);
-});
-
-app.get('/todos', (req, res) => {
-    console.log('Leer lista de tareas');
-    res.send('Lista de tareas!');
-});
-
-
-app.patch('/todos/:id', (req, res) => {
+app.get('/todos/:id', async (req, res) => {
     const { id: todoId } = req.params;
+    const response = await pool.query('SELECT * FROM todos WHERE id = $1'[todoId])
+    console.log('Leer la tarea tarea ' + id);
+    res.status(200).send(response.rows[0])
+});
+
+app.get('/todos', async (req, res) => {
+    console.log('Leer lista de tareas');
+    const response = await pool.query('SELECT * FROM todos')
+    res.status(200).send(response.rows)
+});
+
+
+app.patch('/todos/:id', async (req, res) => {
+    const { id: todoId } = await req.params;
+    const { todo } = req.body
     console.log(`Actualizar la tarea ${todoId}`);
-
-
-
-    res.send(`Se actualizó la tarea ${todoId} con éxito!`);
+    const response = await pool.query('UPDATE todos todo = $1 WHERE id = $2,'[todo, todoId])
+    res.status(200).send(response.rows[0])
 });
 
 
 app.delete('/todos/:id', (req, res) => {
-    const { id: todoId } = req.params;
-    console.log(`Eliminar una tarea ${todoId}`);
-
-
-
-    res.send(`Se eliminó la tarea ${todoId} con éxito!`);
+    const { id: todoId } = await req.params;
+    const { todo } = req.body
+    console.log(`Borrar la tarea ${todoId}`);
+    const response = await pool.query('DELETE FROM todos WHERE todo = $1', [todo, todoId])
+    res.status(200).send(response.rows[0])
 });
 
 app.listen(PORT, () => {
